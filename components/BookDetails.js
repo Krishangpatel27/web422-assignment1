@@ -1,6 +1,7 @@
 import { Container, Row, Col, Button } from "react-bootstrap";
 import { useEffect, useState } from "react";
 import { useAtom } from "jotai";
+import Image from "next/image";
 
 import { favouritesAtom } from "@/store";
 import { addToFavourites, removeFromFavourites } from "@/lib/userData";
@@ -9,16 +10,18 @@ export default function BookDetails({ book }) {
   const [favourites, setFavourites] = useAtom(favouritesAtom);
   const [showAdded, setShowAdded] = useState(false);
 
+  // ID may be undefined if book is null → keep it stable
+  const workId = book?.key || "";
+
+  // RUN HOOKS ALWAYS — React strict mode requires this
+  useEffect(() => {
+    if (book && favourites) {
+      setShowAdded(favourites.includes(workId));
+    }
+  }, [favourites, workId, book]);
+
   if (!book) return null;
 
-  const workId = book.key;   // <— THIS IS YOUR UNIQUE ID
-
-  // Sync button state with DB favourites
-  useEffect(() => {
-    setShowAdded(favourites?.includes(workId));
-  }, [favourites, workId]);
-
-  // Handle add/remove
   async function toggleFavourite() {
     if (showAdded) {
       setFavourites(await removeFromFavourites(workId));
@@ -31,19 +34,17 @@ export default function BookDetails({ book }) {
     <Container>
       <Row>
         <Col lg="4">
-          <img
-            onError={(event) => {
-              event.target.onerror = null;
-              event.target.src =
-                "https://placehold.co/400x600?text=Cover+Not+Available";
-            }}
-            className="img-fluid w-100"
+          <Image
             src={`https://covers.openlibrary.org/b/id/${book?.covers?.[0]}-L.jpg`}
             alt="Cover Image"
+            width={400}
+            height={600}
+            onError={(e) => {
+              e.target.src = "https://placehold.co/400x600?text=No+Cover";
+            }}
           />
           <br /><br />
 
-          {/* ⭐ FAVOURITE BUTTON ⭐ */}
           <Button
             variant={showAdded ? "danger" : "primary"}
             onClick={toggleFavourite}
@@ -62,8 +63,6 @@ export default function BookDetails({ book }) {
                 : book.description.value}
             </p>
           )}
-
-          <br />
 
           {book.subject_people && (
             <>
